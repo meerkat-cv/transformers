@@ -129,6 +129,7 @@ def get_args():
     setattr(args, "no_cuda", False)
     setattr(args, "local_rank", -1)
     setattr(args, "fp16", False)
+    setattr(args, "per_gpu_eval_batch_size", 8)
 
     return args
 
