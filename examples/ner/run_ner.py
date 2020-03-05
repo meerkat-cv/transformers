@@ -54,7 +54,7 @@ from transformers import (
     get_linear_schedule_with_warmup,
 )
 from utils_ner import convert_examples_to_features, get_labels, read_examples_from_file
-
+from utils.mixed_sampling import MixedDataset, MixedSampler
 
 try:
     from torch.utils.tensorboard import SummaryWriter
@@ -98,7 +98,7 @@ def train(args, train_dataset, model, tokenizer, labels, pad_token_label_id):
         tb_writer = SummaryWriter()
 
     args.train_batch_size = args.per_gpu_train_batch_size * max(1, args.n_gpu)
-    train_sampler = RandomSampler(train_dataset) if args.local_rank == -1 else DistributedSampler(train_dataset)
+    train_sampler = MixedSampler(train_dataset, args.proportion) # not dealing with Distributed training
     train_dataloader = DataLoader(train_dataset, sampler=train_sampler, batch_size=args.train_batch_size)
 
     if args.max_steps > 0:
@@ -271,7 +271,8 @@ def train(args, train_dataset, model, tokenizer, labels, pad_token_label_id):
 
 
 def evaluate(args, model, tokenizer, labels, pad_token_label_id, mode, prefix=""):
-    eval_dataset = load_and_cache_examples(args, tokenizer, labels, pad_token_label_id, mode=mode)
+    dataset_indexes = [0,] # only first dataset is used on evaluation
+    eval_dataset = load_and_cache_examples(args, tokenizer, labels, pad_token_label_id, mode=mode, dataset_indexes=dataset_indexes) 
 
     args.eval_batch_size = args.per_gpu_eval_batch_size * max(1, args.n_gpu)
     # Note that DistributedSampler samples randomly
@@ -342,57 +343,60 @@ def evaluate(args, model, tokenizer, labels, pad_token_label_id, mode, prefix=""
 
     return results, preds_list
 
-
-def load_and_cache_examples(args, tokenizer, labels, pad_token_label_id, mode):
+def load_and_cache_examples(args, tokenizer, labels, pad_token_label_id, mode, dataset_indexes=None):
     if args.local_rank not in [-1, 0] and not evaluate:
         torch.distributed.barrier()  # Make sure only the first process in distributed training process the dataset, and the others will use the cache
 
-    # Load data features from cache or dataset file
-    cached_features_file = os.path.join(
-        args.data_dir,
-        "cached_{}_{}_{}".format(
-            mode, list(filter(None, args.model_name_or_path.split("/"))).pop(), str(args.max_seq_length)
-        ),
-    )
-    if os.path.exists(cached_features_file) and not args.overwrite_cache:
-        logger.info("Loading features from cached file %s", cached_features_file)
-        features = torch.load(cached_features_file)
-    else:
-        logger.info("Creating features from dataset file at %s", args.data_dir)
-        examples = read_examples_from_file(args.data_dir, mode)
-        features = convert_examples_to_features(
-            examples,
-            labels,
-            args.max_seq_length,
-            tokenizer,
-            cls_token_at_end=bool(args.model_type in ["xlnet"]),
-            # xlnet has a cls token at the end
-            cls_token=tokenizer.cls_token,
-            cls_token_segment_id=2 if args.model_type in ["xlnet"] else 0,
-            sep_token=tokenizer.sep_token,
-            sep_token_extra=bool(args.model_type in ["roberta"]),
-            # roberta uses an extra separator b/w pairs of sentences, cf. github.com/pytorch/fairseq/commit/1684e166e3da03f5b600dbb7855cb98ddfcd0805
-            pad_on_left=bool(args.model_type in ["xlnet"]),
-            # pad on the left for xlnet
-            pad_token=tokenizer.convert_tokens_to_ids([tokenizer.pad_token])[0],
-            pad_token_segment_id=4 if args.model_type in ["xlnet"] else 0,
-            pad_token_label_id=pad_token_label_id,
+    simple_datasets = []
+
+    datasets_it = map(lambda i: args.data_dir[i], dataset_indexes) if dataset_indexes else args.data_dir
+    for data_dir_idx, data_dir in enumerate(datasets_it):
+        # Load data features from cache or dataset file
+        cached_features_file = os.path.join(
+            data_dir,
+            "cached_{}_{}_{}_{}".format(
+                mode, list(filter(None, args.model_name_or_path.split("/"))).pop(), str(args.max_seq_length), data_dir_idx
+            ),
         )
-        if args.local_rank in [-1, 0]:
-            logger.info("Saving features into cached file %s", cached_features_file)
-            torch.save(features, cached_features_file)
+        if os.path.exists(cached_features_file) and not args.overwrite_cache:
+            logger.info("Loading features from cached file %s", cached_features_file)
+            features = torch.load(cached_features_file)
+        else:
+            logger.info("Creating features from dataset file at %s", data_dir)
+            examples = read_examples_from_file(data_dir, mode)
+            features = convert_examples_to_features(
+                examples,
+                labels,
+                args.max_seq_length,
+                tokenizer,
+                cls_token_at_end=bool(args.model_type in ["xlnet"]),
+                # xlnet has a cls token at the end
+                cls_token=tokenizer.cls_token,
+                cls_token_segment_id=2 if args.model_type in ["xlnet"] else 0,
+                sep_token=tokenizer.sep_token,
+                sep_token_extra=bool(args.model_type in ["roberta"]),
+                # roberta uses an extra separator b/w pairs of sentences, cf. github.com/pytorch/fairseq/commit/1684e166e3da03f5b600dbb7855cb98ddfcd0805
+                pad_on_left=bool(args.model_type in ["xlnet"]),
+                # pad on the left for xlnet
+                pad_token=tokenizer.convert_tokens_to_ids([tokenizer.pad_token])[0],
+                pad_token_segment_id=4 if args.model_type in ["xlnet"] else 0,
+                pad_token_label_id=pad_token_label_id,
+            )
+            if args.local_rank in [-1, 0]:
+                logger.info("Saving features into cached file %s", cached_features_file)
+                torch.save(features, cached_features_file)
 
-    if args.local_rank == 0 and not evaluate:
-        torch.distributed.barrier()  # Make sure only the first process in distributed training process the dataset, and the others will use the cache
+        if args.local_rank == 0 and not evaluate:
+            torch.distributed.barrier()  # Make sure only the first process in distributed training process the dataset, and the others will use the cache
 
-    # Convert to Tensors and build dataset
-    all_input_ids = torch.tensor([f.input_ids for f in features], dtype=torch.long)
-    all_input_mask = torch.tensor([f.input_mask for f in features], dtype=torch.long)
-    all_segment_ids = torch.tensor([f.segment_ids for f in features], dtype=torch.long)
-    all_label_ids = torch.tensor([f.label_ids for f in features], dtype=torch.long)
+        # Convert to Tensors and build dataset
+        all_input_ids = torch.tensor([f.input_ids for f in features], dtype=torch.long)             # pylint: disable=not-callable
+        all_input_mask = torch.tensor([f.input_mask for f in features], dtype=torch.long)           # pylint: disable=not-callable
+        all_segment_ids = torch.tensor([f.segment_ids for f in features], dtype=torch.long)         # pylint: disable=not-callable
+        all_label_ids = torch.tensor([f.label_ids for f in features], dtype=torch.long)             # pylint: disable=not-callable
 
-    dataset = TensorDataset(all_input_ids, all_input_mask, all_segment_ids, all_label_ids)
-    return dataset
+        simple_datasets.append(TensorDataset(all_input_ids, all_input_mask, all_segment_ids, all_label_ids))
+    return MixedDataset(simple_datasets)
 
 
 def main():
@@ -401,6 +405,7 @@ def main():
     # Required parameters
     parser.add_argument(
         "--data_dir",
+        nargs="+",
         default=None,
         type=str,
         required=True,
@@ -532,6 +537,8 @@ def main():
     parser.add_argument("--server_ip", type=str, default="", help="For distant debugging.")
     parser.add_argument("--server_port", type=str, default="", help="For distant debugging.")
     args = parser.parse_args()
+
+    setattr(args, "proportion", [1, 1])
 
     if (
         os.path.exists(args.output_dir)
@@ -684,7 +691,8 @@ def main():
         # Save predictions
         output_test_predictions_file = os.path.join(args.output_dir, "test_predictions.txt")
         with open(output_test_predictions_file, "w") as writer:
-            with open(os.path.join(args.data_dir, "test.txt"), "r") as f:
+            test_data_dir = args.data_dir[0]                    # first data dir is used for testing
+            with open(os.path.join(test_data_dir, "test.txt"), "r") as f:
                 example_id = 0
                 for line in f:
                     if line.startswith("-DOCSTART-") or line == "" or line == "\n":
