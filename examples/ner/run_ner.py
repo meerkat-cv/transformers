@@ -210,6 +210,17 @@ def train(args, train_dataset, model, tokenizer, labels, pad_token_label_id):
                     batch[2] if args.model_type in ["bert", "xlnet"] else None
                 )  # XLM and RoBERTa don"t use segment_ids
 
+            # decode batch
+            decode_batch = False
+            if decode_batch:
+                to_ignore=["[CLS]", "[UNK]", "[PAD]", "[SEP]"]
+                for inp in batch[0]:
+                    word = tokenizer.decode(inp)
+                    for s in to_ignore:
+                        word = word.replace(s, '')
+                    print("Decoded word: %s" % (word,))
+                print("End of batch\n")
+
             outputs = model(**inputs)
             loss = outputs[0]  # model outputs are always tuple in pytorch-transformers (see doc)
 
