@@ -189,13 +189,14 @@ def train(args, train_dataset, model, tokenizer, labels, pad_token_label_id):
         for step, batch in enumerate(epoch_iterator):
 
             # assert on how examples are organized in a batch
-            if len(train_dataset) < args.train_batch_size:
-                for i in range(len(batch)):
-                    print(i, batch[i].shape[0], len(train_dataset))
-                    assert batch[i].shape[0] == len(train_dataset)
-            else:
-                for i in range(len(batch)):
-                    assert batch[i].shape[0] == args.train_batch_size
+            if step < len(train_iterator) - 1:
+                if len(train_dataset) < args.train_batch_size:
+                    for i in range(len(batch)):
+                        print(i, batch[i].shape[0], len(train_dataset))
+                        assert batch[i].shape[0] == len(train_dataset)
+                else:
+                    for i in range(len(batch)):
+                        assert batch[i].shape[0] == args.train_batch_size
 
             # Skip past any already trained steps if resuming training
             if steps_trained_in_current_epoch > 0:
