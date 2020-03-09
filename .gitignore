@@ -145,3 +145,6 @@ debug.env
 
 #ctags
 tags
+
+# loose training output
+portuguese-bert-*
