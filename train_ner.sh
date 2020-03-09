@@ -10,8 +10,8 @@ NUM_EPOCHS=3
 SAVE_STEPS=750
 SEED=1
 
-DATA_DIRS="/home/jpsmartinez/Datasets/meerkat-NER" # /home/jpsmartinez/Datasets/leNER-Br"
-LABEL_PATH=/home/jpsmartinez/Datasets/meerkat-NER/labels.txt
+DATA_DIRS="$HOME/Datasets/meerkat-NER"
+LABEL_PATH=$HOME/Datasets/meerkat-NER/labels.txt
 OUTPUT_DIR=portuguese-bert-meerkat_only
 
 # Configure script behavior
