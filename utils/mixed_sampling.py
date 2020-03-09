@@ -25,7 +25,7 @@ class MixedSampler(Sampler):
         print("Data source # datasets: %d"  % (len(self.data_source.datasets),))
         print("Data proportion: %s" % (self.proportion,))
 
-        assert len(self.proportion) == len(self.data_source.datasets)
+        assert len(self.proportion) >= len(self.data_source.datasets)
         self.reset = [False] * len(self.proportion)
 
     @property
@@ -58,3 +58,4 @@ class MixedSampler(Sampler):
 
     def __len__(self):
         return self.num_samples
+
