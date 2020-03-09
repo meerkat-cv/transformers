@@ -10,9 +10,9 @@ NUM_EPOCHS=3
 SAVE_STEPS=750
 SEED=1
 
-DATA_DIRS="/home/jpsmartinez/Datasets/meerkat-NER /home/jpsmartinez/Datasets/leNER-Br"
+DATA_DIRS="/home/jpsmartinez/Datasets/meerkat-NER" # /home/jpsmartinez/Datasets/leNER-Br"
 LABEL_PATH=/home/jpsmartinez/Datasets/meerkat-NER/labels.txt
-OUTPUT_DIR=portuguese-bert-meerkat+lener
+OUTPUT_DIR=portuguese-bert-meerkat_only
 
 # Configure script behavior
 full () {
@@ -30,10 +30,12 @@ just_train () {
 
 # Launch training
 run() {
-    tmux new -s ner-train -d "python3 -u examples/ner/run_ner.py --data_dir $DATA_DIRS \
+    CMD="python3 -u examples/ner/run_ner.py --data_dir $DATA_DIRS \
         --model_type bert --labels $LABEL_PATH \
         --model_name_or_path $BERT_MODEL --output_dir $OUTPUT_DIR --max_seq_length  $MAX_LENGTH --num_train_epochs $NUM_EPOCHS --per_gpu_train_batch_size $BATCH_SIZE --save_steps $SAVE_STEPS --seed $SEED \
-        $ACTIONS $OVERWRITES &> training.log"
+        $ACTIONS $OVERWRITES" 
+
+    tmux new -s ner-train -d "$CMD &> training.log"
 }
 
 #just_train
