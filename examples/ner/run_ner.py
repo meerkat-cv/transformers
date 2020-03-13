@@ -293,7 +293,7 @@ def train(args, train_dataset, model, tokenizer, labels, pad_token_label_id):
 
 def evaluate(args, model, tokenizer, labels, pad_token_label_id, mode, prefix=""):
     dataset_indexes = [0,] # only first dataset is used on evaluation
-    eval_dataset = load_and_cache_examples(args, tokenizer, labels, pad_token_label_id, mode=mode, dataset_indexes=dataset_indexes) 
+    eval_dataset, examples = load_and_cache_examples(args, tokenizer, labels, pad_token_label_id, mode=mode, dataset_indexes=dataset_indexes) 
 
     args.eval_batch_size = args.per_gpu_eval_batch_size * max(1, args.n_gpu)
     # Note that DistributedSampler samples randomly
@@ -333,9 +333,12 @@ def evaluate(args, model, tokenizer, labels, pad_token_label_id, mode, prefix=""
         if preds is None:
             preds = logits.detach().cpu().numpy()
             out_label_ids = inputs["labels"].detach().cpu().numpy()
+            
+            examples_ids = batch[4].cpu().numpy()
         else:
             preds = np.append(preds, logits.detach().cpu().numpy(), axis=0)
             out_label_ids = np.append(out_label_ids, inputs["labels"].detach().cpu().numpy(), axis=0)
+            examples_ids = np.append(examples_ids, batch[4].cpu().numpy(), axis=0)
 
     eval_loss = eval_loss / nb_eval_steps
     preds = np.argmax(preds, axis=2)
@@ -344,12 +347,14 @@ def evaluate(args, model, tokenizer, labels, pad_token_label_id, mode, prefix=""
 
     out_label_list = [[] for _ in range(out_label_ids.shape[0])]
     preds_list = [[] for _ in range(out_label_ids.shape[0])]
+    examples_list = [[] for _ in range(out_label_ids.shape[0])]
 
     for i in range(out_label_ids.shape[0]):
         for j in range(out_label_ids.shape[1]):
             if out_label_ids[i, j] != pad_token_label_id:
                 out_label_list[i].append(label_map[out_label_ids[i][j]])
                 preds_list[i].append(label_map[preds[i][j]])
+                examples_list[i].append(examples_ids[i][j])
 
     results = {
         "loss": eval_loss,
@@ -362,7 +367,7 @@ def evaluate(args, model, tokenizer, labels, pad_token_label_id, mode, prefix=""
     for key in sorted(results.keys()):
         logger.info("  %s = %s", key, str(results[key]))
 
-    return results, preds_list, out_label_list
+    return results, preds_list, out_label_list, examples_list
 
 def load_and_cache_examples(args, tokenizer, labels, pad_token_label_id, mode, dataset_indexes=None):
     if args.local_rank not in [-1, 0] and not evaluate:
@@ -373,6 +378,7 @@ def load_and_cache_examples(args, tokenizer, labels, pad_token_label_id, mode, d
     datasets_it = map(lambda i: args.data_dir[i], dataset_indexes) if dataset_indexes else args.data_dir
     for data_dir_idx, data_dir in enumerate(datasets_it):
         # Load data features from cache or dataset file
+        examples = read_examples_from_file(data_dir, mode)
         cached_features_file = os.path.join(
             data_dir,
             "cached_{}_{}_{}_{}".format(
@@ -384,7 +390,6 @@ def load_and_cache_examples(args, tokenizer, labels, pad_token_label_id, mode, d
             features = torch.load(cached_features_file)
         else:
             logger.info("Creating features from dataset file at %s", data_dir)
-            examples = read_examples_from_file(data_dir, mode)
             features = convert_examples_to_features(
                 examples,
                 labels,
@@ -415,9 +420,10 @@ def load_and_cache_examples(args, tokenizer, labels, pad_token_label_id, mode, d
         all_input_mask = torch.tensor([f.input_mask for f in features], dtype=torch.long)           # pylint: disable=not-callable
         all_segment_ids = torch.tensor([f.segment_ids for f in features], dtype=torch.long)         # pylint: disable=not-callable
         all_label_ids = torch.tensor([f.label_ids for f in features], dtype=torch.long)             # pylint: disable=not-callable
+        all_examples_ids = torch.tensor([f.example_ids for f in features], dtype=torch.long)        # pylint: disable=not-callable
 
-        simple_datasets.append(TensorDataset(all_input_ids, all_input_mask, all_segment_ids, all_label_ids))
-    return MixedDataset(simple_datasets)
+        simple_datasets.append(TensorDataset(all_input_ids, all_input_mask, all_segment_ids, all_label_ids, all_examples_ids))
+    return MixedDataset(simple_datasets), examples
 
 
 def main():

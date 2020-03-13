@@ -4,8 +4,10 @@ import logging
 
 import torch
 from torch.nn import CrossEntropyLoss
+import numpy as np
 
 from examples.ner.run_ner import set_seed, get_labels, evaluate
+from seqeval.metrics import f1_score, precision_score, recall_score
 
 from transformers import (
     WEIGHTS_NAME,
@@ -190,7 +192,31 @@ def main():
     )
     model.to(args.device)
 
-    result, predictions, gt = evaluate(args, model, tokenizer, labels, pad_token_label_id, mode="test")
+    result, predictions, gt, examples_list = evaluate(args, model, tokenizer, labels, pad_token_label_id, mode="test_examples")
+    examples_list = np.array(examples_list)
+
+    # flatten examples_list
+    examples_ids = []
+    for l in examples_list:
+        assert all(map(lambda x: x == l[0], l[1:]))
+        examples_ids.append(l[0])
+    examples_ids = np.array(examples_ids)
+
+    results_per_example = {}
+    for e_idx in examples_ids:
+        indexes = np.where(examples_ids == e_idx)[0]
+        results_per_example[e_idx] = {
+            "precision": precision_score(np.take(gt, indexes), np.take(predictions, indexes)),
+            "recall": recall_score(np.take(gt, indexes), np.take(predictions, indexes)),
+            "f1": f1_score(np.take(gt, indexes), np.take(predictions, indexes)),
+        }
+    print(results_per_example)
+
+    examples_filter_criteria = lambda r: r["f1"] < 0.6
+    bad_examples = list(filter(lambda k: examples_filter_criteria(results_per_example[k]), results_per_example.keys()))
+    print(bad_examples)
+    print("%f%% of examples are bad, given provided criteria" % (100 *  len(bad_examples) / len(results_per_example.keys())))
+
     # Save results
     output_test_results_file = os.path.join(args.output_dir, "test_results.txt")
     with open(output_test_results_file, "w") as writer:
