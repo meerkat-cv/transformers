@@ -224,6 +224,9 @@ def main():
             writer.write("{} = {}\n".format(key, str(result[key])))
     # Save predictions
     output_test_predictions_file = os.path.join(args.output_dir, "test_predictions.txt")
+
+    # predictions for test set
+    result, predictions, gt, _ = evaluate(args, model, tokenizer, labels, pad_token_label_id, mode="test")
     with open(output_test_predictions_file, "w") as writer:
         test_data_dir = args.data_dir[0]                    # first data dir is used for testing
         with open(os.path.join(test_data_dir, "test.txt"), "r") as f:
