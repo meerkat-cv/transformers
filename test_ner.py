@@ -192,7 +192,8 @@ def main():
     )
     model.to(args.device)
 
-    result, predictions, gt, examples_list = evaluate(args, model, tokenizer, labels, pad_token_label_id, mode="test_examples")
+    # predictions per example
+    result, predictions, gt, examples_list, examples_paths = evaluate(args, model, tokenizer, labels, pad_token_label_id, mode="test_samples")
     examples_list = np.array(examples_list)
 
     # flatten examples_list
@@ -201,6 +202,12 @@ def main():
         assert all(map(lambda x: x == l[0], l[1:]))
         examples_ids.append(l[0])
     examples_ids = np.array(examples_ids)
+    print("Number of examples: %d" % (len(list(set(examples_ids)))))
+    try:
+        assert len(list(filter(lambda x: x>=0, np.unique(examples_ids)))) == len(set(examples_paths))
+    except AssertionError:
+        print(list(filter(lambda x: x>=0, np.unique(examples_ids))), set(examples_paths))
+        raise Exception("Number of unique examples ids do not match number of example paths")
 
     results_per_example = {}
     for e_idx in examples_ids:
@@ -217,6 +224,8 @@ def main():
     print(bad_examples)
     print("%f%% of examples are bad, given provided criteria" % (100 *  len(bad_examples) / len(results_per_example.keys())))
 
+    # predictions for test set
+    result, predictions, gt, _, _ = evaluate(args, model, tokenizer, labels, pad_token_label_id, mode="test")
     # Save results
     output_test_results_file = os.path.join(args.output_dir, "test_results.txt")
     with open(output_test_results_file, "w") as writer:

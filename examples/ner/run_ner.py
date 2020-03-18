@@ -293,7 +293,7 @@ def train(args, train_dataset, model, tokenizer, labels, pad_token_label_id):
 
 def evaluate(args, model, tokenizer, labels, pad_token_label_id, mode, prefix=""):
     dataset_indexes = [0,] # only first dataset is used on evaluation
-    eval_dataset, examples = load_and_cache_examples(args, tokenizer, labels, pad_token_label_id, mode=mode, dataset_indexes=dataset_indexes) 
+    eval_dataset, samples_paths = load_and_cache_examples(args, tokenizer, labels, pad_token_label_id, mode=mode, dataset_indexes=dataset_indexes) 
 
     args.eval_batch_size = args.per_gpu_eval_batch_size * max(1, args.n_gpu)
     # Note that DistributedSampler samples randomly
@@ -367,7 +367,7 @@ def evaluate(args, model, tokenizer, labels, pad_token_label_id, mode, prefix=""
     for key in sorted(results.keys()):
         logger.info("  %s = %s", key, str(results[key]))
 
-    return results, preds_list, out_label_list, examples_list
+    return results, preds_list, out_label_list, examples_list, samples_paths
 
 def load_and_cache_examples(args, tokenizer, labels, pad_token_label_id, mode, dataset_indexes=None):
     if args.local_rank not in [-1, 0] and not evaluate:

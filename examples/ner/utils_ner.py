@@ -53,8 +53,8 @@ class InputFeatures(object):
         self.example_ids = example_ids
 
 def read_examples_from_file(data_dir, mode):
-    if mode == "test_examples":
-        test_data_dir = os.path.join(data_dir, "test_examples")
+    if mode == "test_samples":
+        test_data_dir = os.path.join(data_dir, "test_samples")
         file_paths = list(map(lambda s: os.path.join(test_data_dir, s), os.listdir(test_data_dir)))
     else:
         file_paths = [os.path.join(data_dir, "{}.txt".format(mode))]
@@ -82,7 +82,7 @@ def read_examples_from_file(data_dir, mode):
                         labels.append("O")
             if words:
                 examples.append(InputExample(guid="{}-{}".format(mode, guid_index), words=words, labels=labels, filepath=file_path))
-    return examples
+    return examples, file_paths
 
 
 def convert_examples_to_features(
