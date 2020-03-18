@@ -210,13 +210,22 @@ def main():
         raise Exception("Number of unique examples ids do not match number of example paths")
 
     results_per_example = {}
+    predictions_per_sample_dir = "sample_predictions"
+    os.mkdir(predictions_per_sample_dir)
     for e_idx in examples_ids:
         indexes = np.where(examples_ids == e_idx)[0]
+        e_gt = np.take(gt, indexes)
+        e_pred = np.take(predictions, indexes)
+        e_gt = [list(x) for x in e_gt]
+        e_pred = [list(x) for x in e_pred]
+
         results_per_example[e_idx] = {
-            "precision": precision_score(np.take(gt, indexes), np.take(predictions, indexes)),
-            "recall": recall_score(np.take(gt, indexes), np.take(predictions, indexes)),
-            "f1": f1_score(np.take(gt, indexes), np.take(predictions, indexes)),
+            "precision": precision_score(e_gt, e_pred),
+            "recall": recall_score(e_gt, e_pred),
+            "f1": f1_score(e_gt, e_pred),
         }
+        e_path = examples_paths[e_idx]
+        store_predictions(e_pred, e_gt, os.path.join(predictions_per_sample_dir, os.path.basename(e_path)), e_path)
     print(results_per_example)
 
     examples_filter_criteria = lambda r: r["f1"] < 0.6
