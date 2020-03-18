@@ -111,27 +111,30 @@ def convert_examples_to_features(
 
     label_map = {label: i for i, label in enumerate(label_list)}
 
+    examples_filepaths = sorted(list(set(map(lambda x: x.filepath, examples))))
+
     features = []
     for (ex_index, example) in enumerate(examples):
         if ex_index % 10000 == 0:
             logger.info("Writing example %d of %d", ex_index, len(examples))
+        ex_fp_index = examples_filepaths.index(example.filepath)
 
         tokens = []
         label_ids = []
-        examples_ids = []
+        filepaths_ids = []
         for word, label in zip(example.words, example.labels):
             word_tokens = tokenizer.tokenize(word)
             tokens.extend(word_tokens)
             # Use the real label id for the first token of the word, and padding ids for the remaining tokens
             label_ids.extend([label_map[label]] + [pad_token_label_id] * (len(word_tokens) - 1))
-            examples_ids.extend([ex_index] * len(word_tokens))
+            filepaths_ids.extend([ex_fp_index]* len(word_tokens))
 
         # Account for [CLS] and [SEP] with "- 2" and with "- 3" for RoBERTa.
         special_tokens_count = 3 if sep_token_extra else 2
         if len(tokens) > max_seq_length - special_tokens_count:
             tokens = tokens[: (max_seq_length - special_tokens_count)]
             label_ids = label_ids[: (max_seq_length - special_tokens_count)]
-            examples_ids = examples_ids[: (max_seq_length - special_tokens_count)]
+            filepaths_ids = filepaths_ids[: (max_seq_length - special_tokens_count)]
 
         # The convention in BERT is:
         # (a) For sequence pairs:
@@ -153,24 +156,24 @@ def convert_examples_to_features(
         # the entire model is fine-tuned.
         tokens += [sep_token]
         label_ids += [pad_token_label_id]
-        examples_ids += [ex_index]
+        filepaths_ids += [ex_fp_index]
         if sep_token_extra:
             # roberta uses an extra separator b/w pairs of sentences
             tokens += [sep_token]
             label_ids += [pad_token_label_id]
-            examples_ids += [ex_index]
+            filepaths_ids += [ex_fp_index]
         segment_ids = [sequence_a_segment_id] * len(tokens)
 
         if cls_token_at_end:
             tokens += [cls_token]
             label_ids += [pad_token_label_id]
             segment_ids += [cls_token_segment_id]
-            examples_ids += [ex_index]
+            filepaths_ids += [ex_fp_index]
         else:
             tokens = [cls_token] + tokens
             label_ids = [pad_token_label_id] + label_ids
             segment_ids = [cls_token_segment_id] + segment_ids
-            examples_ids = [ex_index] + examples_ids
+            filepaths_ids = [ex_fp_index] + filepaths_ids
         
 
         input_ids = tokenizer.convert_tokens_to_ids(tokens)
@@ -186,19 +189,19 @@ def convert_examples_to_features(
             input_mask = ([0 if mask_padding_with_zero else 1] * padding_length) + input_mask
             segment_ids = ([pad_token_segment_id] * padding_length) + segment_ids
             label_ids = ([pad_token_label_id] * padding_length) + label_ids
-            examples_ids = ([ex_index] * padding_length) + examples_ids
+            filepaths_ids = ([ex_fp_index] * padding_length) + filepaths_ids
         else:
             input_ids += [pad_token] * padding_length
             input_mask += [0 if mask_padding_with_zero else 1] * padding_length
             segment_ids += [pad_token_segment_id] * padding_length
             label_ids += [pad_token_label_id] * padding_length
-            examples_ids += [ex_index] * padding_length
+            filepaths_ids += [ex_fp_index] * padding_length
 
         assert len(input_ids) == max_seq_length
         assert len(input_mask) == max_seq_length
         assert len(segment_ids) == max_seq_length
         assert len(label_ids) == max_seq_length
-        assert len(examples_ids) == max_seq_length
+        assert len(filepaths_ids) == max_seq_length
 
         if ex_index < 5:
             logger.info("*** Example ***")
@@ -210,7 +213,7 @@ def convert_examples_to_features(
             logger.info("label_ids: %s", " ".join([str(x) for x in label_ids]))
 
         features.append(
-            InputFeatures(input_ids=input_ids, input_mask=input_mask, segment_ids=segment_ids, label_ids=label_ids, example_ids=examples_ids)
+            InputFeatures(input_ids=input_ids, input_mask=input_mask, segment_ids=segment_ids, label_ids=label_ids, example_ids=filepaths_ids)
         )
     return features
 
