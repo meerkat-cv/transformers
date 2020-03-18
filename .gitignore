@@ -148,3 +148,8 @@ tags
 
 # loose training output
 portuguese-bert-*
+
+# loose prediction output
+sample_predictions
+test_predictions.txt
+test_results.txt

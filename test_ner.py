@@ -8,6 +8,7 @@ import numpy as np
 
 from examples.ner.run_ner import set_seed, get_labels, evaluate
 from seqeval.metrics import f1_score, precision_score, recall_score
+from examples.ner.utils_ner import store_predictions
 
 from transformers import (
     WEIGHTS_NAME,
@@ -137,6 +138,7 @@ def get_args():
 
 def main():
     args = get_args()
+    print(args)
 
     # device allocation
     device = torch.device("cuda" if torch.cuda.is_available() and not args.no_cuda else "cpu")
@@ -194,6 +196,7 @@ def main():
 
     # predictions per example
     result, predictions, gt, examples_list, examples_paths = evaluate(args, model, tokenizer, labels, pad_token_label_id, mode="test_samples")
+    assert len(predictions) == len(examples_list)
     examples_list = np.array(examples_list)
 
     # flatten examples_list

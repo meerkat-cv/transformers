@@ -375,10 +375,12 @@ def load_and_cache_examples(args, tokenizer, labels, pad_token_label_id, mode, d
 
     simple_datasets = []
 
+    all_file_paths = []
     datasets_it = map(lambda i: args.data_dir[i], dataset_indexes) if dataset_indexes else args.data_dir
     for data_dir_idx, data_dir in enumerate(datasets_it):
         # Load data features from cache or dataset file
-        examples = read_examples_from_file(data_dir, mode)
+        examples, file_paths = read_examples_from_file(data_dir, mode)
+        all_file_paths += file_paths
         cached_features_file = os.path.join(
             data_dir,
             "cached_{}_{}_{}_{}".format(
@@ -420,10 +422,10 @@ def load_and_cache_examples(args, tokenizer, labels, pad_token_label_id, mode, d
         all_input_mask = torch.tensor([f.input_mask for f in features], dtype=torch.long)           # pylint: disable=not-callable
         all_segment_ids = torch.tensor([f.segment_ids for f in features], dtype=torch.long)         # pylint: disable=not-callable
         all_label_ids = torch.tensor([f.label_ids for f in features], dtype=torch.long)             # pylint: disable=not-callable
-        all_examples_ids = torch.tensor([f.example_ids for f in features], dtype=torch.long)        # pylint: disable=not-callable
+        all_filepaths_ids = torch.tensor([f.example_ids for f in features], dtype=torch.long)        # pylint: disable=not-callable
 
-        simple_datasets.append(TensorDataset(all_input_ids, all_input_mask, all_segment_ids, all_label_ids, all_examples_ids))
-    return MixedDataset(simple_datasets), examples
+        simple_datasets.append(TensorDataset(all_input_ids, all_input_mask, all_segment_ids, all_label_ids, all_filepaths_ids))
+    return MixedDataset(simple_datasets), all_file_paths
 
 
 def main():
