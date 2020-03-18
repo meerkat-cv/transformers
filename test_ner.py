@@ -225,21 +225,6 @@ def main():
     # Save predictions
     output_test_predictions_file = os.path.join(args.output_dir, "test_predictions.txt")
 
-    # predictions for test set
-    result, predictions, gt, _ = evaluate(args, model, tokenizer, labels, pad_token_label_id, mode="test")
-    with open(output_test_predictions_file, "w") as writer:
-        test_data_dir = args.data_dir[0]                    # first data dir is used for testing
-        with open(os.path.join(test_data_dir, "test.txt"), "r") as f:
-            example_id = 0
-            for line in f:
-                if line.startswith("-DOCSTART-") or line == "" or line == "\n":
-                    writer.write(line)
-                    if not predictions[example_id]:
-                        example_id += 1
-                elif predictions[example_id]:
-                    output_line = line.split()[0] + " " + predictions[example_id].pop(0) + " " + gt[example_id].pop(0) + "\n"
-                    writer.write(output_line)
-                else:
-                    logger.warning("Maximum sequence length exceeded: No prediction for '%s'.", line.split()[0])
+    store_predictions(predictions, gt, output_test_predictions_file, os.path.join(args.data_dir[0], "test.txt")) # first data dir is used for testing
 
 main() if __name__ == '__main__' else True

@@ -224,3 +224,18 @@ def get_labels(path):
         return labels
     else:
         return ["O", "B-MISC", "I-MISC", "B-PER", "I-PER", "B-ORG", "I-ORG", "B-LOC", "I-LOC"]
+
+def store_predictions(predictions, gt, output_test_predictions_file, examples_file):
+    with open(output_test_predictions_file, "w") as writer:
+        with open(examples_file, "r") as f:
+            example_id = 0
+            for line in f:
+                if line.startswith("-DOCSTART-") or line == "" or line == "\n":
+                    writer.write(line)
+                    if not predictions[example_id]:
+                        example_id += 1
+                elif predictions[example_id]:
+                    output_line = line.split()[0] + " " + predictions[example_id].pop(0) + " " + gt[example_id].pop(0) + "\n"
+                    writer.write(output_line)
+                else:
+                    logger.warning("Maximum sequence length exceeded: No prediction for '%s'.", line.split()[0])
