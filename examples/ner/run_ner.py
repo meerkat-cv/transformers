@@ -427,8 +427,7 @@ def load_and_cache_examples(args, tokenizer, labels, pad_token_label_id, mode, d
         simple_datasets.append(TensorDataset(all_input_ids, all_input_mask, all_segment_ids, all_label_ids, all_filepaths_ids))
     return MixedDataset(simple_datasets), all_file_paths
 
-
-def main():
+def get_args():
     parser = argparse.ArgumentParser()
 
     # Required parameters
@@ -601,6 +600,11 @@ def main():
         args.n_gpu = 1
     args.device = device
 
+    return args
+
+def main():
+    args = get_args()
+
     # Setup logging
     logging.basicConfig(
         format="%(asctime)s - %(levelname)s - %(name)s -   %(message)s",
@@ -610,7 +614,7 @@ def main():
     logger.warning(
         "Process rank: %s, device: %s, n_gpu: %s, distributed training: %s, 16-bits training: %s",
         args.local_rank,
-        device,
+        args.device,
         args.n_gpu,
         bool(args.local_rank != -1),
         args.fp16,
