@@ -229,8 +229,6 @@ def get_labels(path):
         return ["O", "B-MISC", "I-MISC", "B-PER", "I-PER", "B-ORG", "I-ORG", "B-LOC", "I-LOC"]
 
 def store_predictions(predictions, gt, output_test_predictions_file, examples_file):
-    print("Predictions list has %s as lengths" % (set(map(lambda p: len(p), predictions))))
-    print("Number of predictions ", len(predictions))
     raw_predictions = copy.deepcopy(predictions)
     problematic_examples = set()
     empty_line = False
@@ -250,5 +248,9 @@ def store_predictions(predictions, gt, output_test_predictions_file, examples_fi
                         writer.write(output_line)
                     else:
                         problematic_examples.add(example_id)
-    print("Problematic examples %s" % (problematic_examples,))
-    print("Lengths of problematic examples %s" % (set(map(lambda i: len(raw_predictions[i]), problematic_examples))))
+    
+    if len(problematic_examples) > 0:
+        print("Predictions list has %s as lengths" % (set(map(lambda p: len(p), predictions))))
+        print("Number of predictions ", len(predictions))
+        print("Problematic examples %s" % (problematic_examples,))
+        print("Lengths of problematic examples %s" % (set(map(lambda i: len(raw_predictions[i]), problematic_examples))))
