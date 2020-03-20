@@ -195,46 +195,47 @@ def main():
     model.to(args.device)
 
     # predictions per example
-    result, predictions, gt, examples_list, examples_paths = evaluate(args, model, tokenizer, labels, pad_token_label_id, mode="test_samples")
-    assert len(predictions) == len(examples_list)
-    examples_list = np.array(examples_list)
+    if os.path.isdir(os.path.join(args.data_dir[0], "test_samples")):
+        result, predictions, gt, examples_list, examples_paths = evaluate(args, model, tokenizer, labels, pad_token_label_id, mode="test_samples")
+        assert len(predictions) == len(examples_list)
+        examples_list = np.array(examples_list)
 
-    # flatten examples_list
-    examples_ids = []
-    for l in examples_list:
-        assert all(map(lambda x: x == l[0], l[1:]))
-        examples_ids.append(l[0])
-    examples_ids = np.array(examples_ids)
-    print("Number of examples: %d" % (len(list(set(examples_ids)))))
-    try:
-        assert len(list(filter(lambda x: x>=0, np.unique(examples_ids)))) == len(set(examples_paths))
-    except AssertionError:
-        print(list(filter(lambda x: x>=0, np.unique(examples_ids))), set(examples_paths))
-        raise Exception("Number of unique examples ids do not match number of example paths")
+        # flatten examples_list
+        examples_ids = []
+        for l in examples_list:
+            assert all(map(lambda x: x == l[0], l[1:]))
+            examples_ids.append(l[0])
+        examples_ids = np.array(examples_ids)
+        print("Number of examples: %d" % (len(list(set(examples_ids)))))
+        try:
+            assert len(list(filter(lambda x: x>=0, np.unique(examples_ids)))) == len(set(examples_paths))
+        except AssertionError:
+            print(list(filter(lambda x: x>=0, np.unique(examples_ids))), set(examples_paths))
+            raise Exception("Number of unique examples ids do not match number of example paths")
 
-    results_per_example = {}
-    predictions_per_sample_dir = "sample_predictions"
-    os.mkdir(predictions_per_sample_dir)
-    for e_idx in examples_ids:
-        indexes = np.where(examples_ids == e_idx)[0]
-        e_gt = np.take(gt, indexes)
-        e_pred = np.take(predictions, indexes)
-        e_gt = [list(x) for x in e_gt]
-        e_pred = [list(x) for x in e_pred]
+        results_per_example = {}
+        predictions_per_sample_dir = "sample_predictions"
+        os.mkdir(predictions_per_sample_dir)
+        for e_idx in examples_ids:
+            indexes = np.where(examples_ids == e_idx)[0]
+            e_gt = np.take(gt, indexes)
+            e_pred = np.take(predictions, indexes)
+            e_gt = [list(x) for x in e_gt]
+            e_pred = [list(x) for x in e_pred]
 
-        results_per_example[e_idx] = {
-            "precision": precision_score(e_gt, e_pred),
-            "recall": recall_score(e_gt, e_pred),
-            "f1": f1_score(e_gt, e_pred),
-        }
-        e_path = examples_paths[e_idx]
-        store_predictions(e_pred, e_gt, os.path.join(predictions_per_sample_dir, os.path.basename(e_path)), e_path)
-    print(results_per_example)
+            results_per_example[e_idx] = {
+                "precision": precision_score(e_gt, e_pred),
+                "recall": recall_score(e_gt, e_pred),
+                "f1": f1_score(e_gt, e_pred),
+            }
+            e_path = examples_paths[e_idx]
+            store_predictions(e_pred, e_gt, os.path.join(predictions_per_sample_dir, os.path.basename(e_path)), e_path)
+        print(results_per_example)
 
-    examples_filter_criteria = lambda r: r["f1"] < 0.6
-    bad_examples = list(filter(lambda k: examples_filter_criteria(results_per_example[k]), results_per_example.keys()))
-    print(bad_examples)
-    print("%f%% of examples are bad, given provided criteria" % (100 *  len(bad_examples) / len(results_per_example.keys())))
+        examples_filter_criteria = lambda r: r["f1"] < 0.6
+        bad_examples = list(filter(lambda k: examples_filter_criteria(results_per_example[k]), results_per_example.keys()))
+        print(bad_examples)
+        print("%f%% of examples are bad, given provided criteria" % (100 *  len(bad_examples) / len(results_per_example.keys())))
 
     # predictions for test set
     result, predictions, gt, _, _ = evaluate(args, model, tokenizer, labels, pad_token_label_id, mode="test")
