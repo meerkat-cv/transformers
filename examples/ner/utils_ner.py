@@ -15,10 +15,10 @@
 # limitations under the License.
 """ Named entity recognition fine-tuning: utilities to work with CoNLL-2003 task. """
 
-
 import logging
 import os
 
+import copy
 
 logger = logging.getLogger(__name__)
 
