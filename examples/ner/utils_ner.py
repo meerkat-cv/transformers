@@ -229,16 +229,26 @@ def get_labels(path):
         return ["O", "B-MISC", "I-MISC", "B-PER", "I-PER", "B-ORG", "I-ORG", "B-LOC", "I-LOC"]
 
 def store_predictions(predictions, gt, output_test_predictions_file, examples_file):
+    print("Predictions list has %s as lengths" % (set(map(lambda p: len(p), predictions))))
+    print("Number of predictions ", len(predictions))
+    raw_predictions = copy.deepcopy(predictions)
+    problematic_examples = set()
+    empty_line = False
     with open(output_test_predictions_file, "w") as writer:
         with open(examples_file, "r") as f:
             example_id = 0
             for line in f:
                 if line.startswith("-DOCSTART-") or line == "" or line == "\n":
                     writer.write(line)
-                    if not predictions[example_id]:
+                    if not empty_line and not predictions[example_id]:
                         example_id += 1
-                elif predictions[example_id]:
-                    output_line = line.split()[0] + " " + predictions[example_id].pop(0) + " " + gt[example_id].pop(0) + "\n"
-                    writer.write(output_line)
+                    empty_line = True
                 else:
-                    logger.warning("Maximum sequence length exceeded: No prediction for '%s'.", line.split()[0])
+                    empty_line = False
+                    if predictions[example_id]:
+                        output_line = line.split()[0] + " " + predictions[example_id].pop(0) + " " + gt[example_id].pop(0) + "\n"
+                        writer.write(output_line)
+                    else:
+                        problematic_examples.add(example_id)
+    print("Problematic examples %s" % (problematic_examples,))
+    print("Lengths of problematic examples %s" % (set(map(lambda i: len(raw_predictions[i]), problematic_examples))))
