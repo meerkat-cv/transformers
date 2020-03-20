@@ -55,7 +55,7 @@ class InputFeatures(object):
 def read_examples_from_file(data_dir, mode):
     if mode == "test_samples":
         test_data_dir = os.path.join(data_dir, "test_samples")
-        file_paths = list(map(lambda s: os.path.join(test_data_dir, s), os.listdir(test_data_dir)))
+        file_paths = sorted(list(map(lambda s: os.path.join(test_data_dir, s), os.listdir(test_data_dir))))
     else:
         file_paths = [os.path.join(data_dir, "{}.txt".format(mode))]
     

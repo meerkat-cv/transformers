@@ -425,7 +425,7 @@ def load_and_cache_examples(args, tokenizer, labels, pad_token_label_id, mode, d
         all_filepaths_ids = torch.tensor([f.example_ids for f in features], dtype=torch.long)        # pylint: disable=not-callable
 
         simple_datasets.append(TensorDataset(all_input_ids, all_input_mask, all_segment_ids, all_label_ids, all_filepaths_ids))
-    return MixedDataset(simple_datasets), all_file_paths
+    return MixedDataset(simple_datasets), sorted(all_file_paths)
 
 def get_args():
     parser = argparse.ArgumentParser()
