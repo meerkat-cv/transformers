@@ -130,6 +130,9 @@ def convert_examples_to_features(
             filepaths_ids.extend([ex_fp_index]* len(word_tokens))
 
         # Account for [CLS] and [SEP] with "- 2" and with "- 3" for RoBERTa.
+        
+        if len(tokens) > max_seq_length:
+            logging.warning("Example %d tokens' length %d exceed maximum sequence length %d" % (ex_index, len(tokens), max_seq_length))
         special_tokens_count = 3 if sep_token_extra else 2
         if len(tokens) > max_seq_length - special_tokens_count:
             tokens = tokens[: (max_seq_length - special_tokens_count)]
