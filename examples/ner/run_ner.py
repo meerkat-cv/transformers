@@ -665,7 +665,7 @@ def main():
 
     # Training
     if args.do_train:
-        train_dataset = load_and_cache_examples(args, tokenizer, labels, pad_token_label_id, mode="train")
+        train_dataset, _ = load_and_cache_examples(args, tokenizer, labels, pad_token_label_id, mode="train")
         global_step, tr_loss = train(args, train_dataset, model, tokenizer, labels, pad_token_label_id)
         logger.info(" global_step = %s, average loss = %s", global_step, tr_loss)
 
@@ -715,7 +715,7 @@ def main():
         tokenizer = tokenizer_class.from_pretrained(args.output_dir, **tokenizer_args)
         model = model_class.from_pretrained(args.output_dir)
         model.to(args.device)
-        result, predictions, gt = evaluate(args, model, tokenizer, labels, pad_token_label_id, mode="test")
+        result, predictions, gt, *_ = evaluate(args, model, tokenizer, labels, pad_token_label_id, mode="test")
         # Save results
         output_test_results_file = os.path.join(args.output_dir, "test_results.txt")
         with open(output_test_results_file, "w") as writer:
