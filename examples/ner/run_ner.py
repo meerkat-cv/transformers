@@ -418,11 +418,11 @@ def load_and_cache_examples(args, tokenizer, labels, pad_token_label_id, mode, d
             torch.distributed.barrier()  # Make sure only the first process in distributed training process the dataset, and the others will use the cache
 
         # Convert to Tensors and build dataset
-        all_input_ids = torch.tensor([f.input_ids for f in features], dtype=torch.long)             # pylint: disable=not-callable
-        all_input_mask = torch.tensor([f.input_mask for f in features], dtype=torch.long)           # pylint: disable=not-callable
-        all_segment_ids = torch.tensor([f.segment_ids for f in features], dtype=torch.long)         # pylint: disable=not-callable
-        all_label_ids = torch.tensor([f.label_ids for f in features], dtype=torch.long)             # pylint: disable=not-callable
-        all_filepaths_ids = torch.tensor([f.example_ids for f in features], dtype=torch.long)        # pylint: disable=not-callable
+        all_input_ids = torch.tensor([f.input_ids for f in features], dtype=torch.long)                 # pylint: disable=not-callable
+        all_input_mask = torch.tensor([f.input_mask for f in features], dtype=torch.long)               # pylint: disable=not-callable
+        all_segment_ids = torch.tensor([f.segment_ids for f in features], dtype=torch.long)             # pylint: disable=not-callable
+        all_label_ids = torch.tensor([f.label_ids for f in features], dtype=torch.long)                 # pylint: disable=not-callable
+        all_filepaths_ids = torch.tensor([f.example_ids for f in features], dtype=torch.long)           # pylint: disable=not-callable
 
         simple_datasets.append(TensorDataset(all_input_ids, all_input_mask, all_segment_ids, all_label_ids, all_filepaths_ids))
     return MixedDataset(simple_datasets), sorted(all_file_paths)
