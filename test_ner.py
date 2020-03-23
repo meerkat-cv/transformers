@@ -238,37 +238,39 @@ def main():
         print("%f%% of examples are bad, given provided criteria" % (100 *  len(bad_examples) / len(results_per_example.keys())))
 
     # predictions for test set
-    result, predictions, gt, _, _ = evaluate(args, model, tokenizer, labels, pad_token_label_id, mode="test")
+    do_test_set = False
+    if do_test_set:
+        result, predictions, gt, _, _ = evaluate(args, model, tokenizer, labels, pad_token_label_id, mode="test")
 
-    # computes metrics per class
-    results_per_class = {}
-    for label in labels:
-        l_gt = np.copy(gt)
-        l_preds = np.copy(predictions)
-    
-        # could be replaced by np.isin
-        indexes = []
-        for idx, g in enumerate(gt):
-            if 'O' in g:
-                indexes.append(idx)
-                l_gt[idx] = list(map(lambda x: x if x == label else 'O', gt[idx]))
-                l_preds[idx] = list(map(lambda x: x if x == label else 'O', predictions[idx]))
-    
-        results_per_class[label] = {
-            "precision": precision_score(np.take(l_gt, indexes), np.take(l_preds, indexes)),
-            "recall": recall_score(np.take(l_gt, indexes), np.take(l_preds, indexes)),
-            "f1": f1_score(np.take(l_gt, indexes), np.take(l_preds, indexes)),
-        }
-    print(results_per_class)
+        # computes metrics per class
+        results_per_class = {}
+        for label in labels:
+            l_gt = np.copy(gt)
+            l_preds = np.copy(predictions)
+        
+            # could be replaced by np.isin
+            indexes = []
+            for idx, g in enumerate(gt):
+                if 'O' in g:
+                    indexes.append(idx)
+                    l_gt[idx] = list(map(lambda x: x if x == label else 'O', gt[idx]))
+                    l_preds[idx] = list(map(lambda x: x if x == label else 'O', predictions[idx]))
+        
+            results_per_class[label] = {
+                "precision": precision_score(np.take(l_gt, indexes), np.take(l_preds, indexes)),
+                "recall": recall_score(np.take(l_gt, indexes), np.take(l_preds, indexes)),
+                "f1": f1_score(np.take(l_gt, indexes), np.take(l_preds, indexes)),
+            }
+        print(results_per_class)
 
-    # Save results
-    output_test_results_file = os.path.join(args.output_dir, "test_results.txt")
-    with open(output_test_results_file, "w") as writer:
-        for key in sorted(result.keys()):
-            writer.write("{} = {}\n".format(key, str(result[key])))
-    # Save predictions
-    output_test_predictions_file = os.path.join(args.output_dir, "test_predictions.txt")
+        # Save results
+        output_test_results_file = os.path.join(args.output_dir, "test_results.txt")
+        with open(output_test_results_file, "w") as writer:
+            for key in sorted(result.keys()):
+                writer.write("{} = {}\n".format(key, str(result[key])))
+        # Save predictions
+        output_test_predictions_file = os.path.join(args.output_dir, "test_predictions.txt")
 
-    store_predictions(predictions, gt, output_test_predictions_file, os.path.join(args.data_dir[0], "test.txt")) # first data dir is used for testing
+        store_predictions(predictions, gt, output_test_predictions_file, os.path.join(args.data_dir[0], "test.txt")) # first data dir is used for testing
 
 main() if __name__ == '__main__' else True
