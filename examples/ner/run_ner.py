@@ -54,6 +54,7 @@ from transformers import (
     get_linear_schedule_with_warmup,
 )
 from utils_ner import convert_examples_to_features, get_labels, read_examples_from_file
+from utils_ner import decode_batch
 from utils.mixed_sampling import MixedDataset, MixedSampler
 
 try:
@@ -211,16 +212,7 @@ def train(args, train_dataset, model, tokenizer, labels, pad_token_label_id):
                     batch[2] if args.model_type in ["bert", "xlnet"] else None
                 )  # XLM and RoBERTa don"t use segment_ids
 
-            # decode batch
-            decode_batch = False
-            if decode_batch:
-                to_ignore=["[CLS]", "[UNK]", "[PAD]", "[SEP]"]
-                for inp in batch[0]:
-                    word = tokenizer.decode(inp)
-                    for s in to_ignore:
-                        word = word.replace(s, '')
-                    print("Decoded word: %s" % (word,))
-                print("End of batch\n")
+            decode_batch(tokenizer, batch)
 
             outputs = model(**inputs)
             loss = outputs[0]  # model outputs are always tuple in pytorch-transformers (see doc)
@@ -315,6 +307,8 @@ def evaluate(args, model, tokenizer, labels, pad_token_label_id, mode, prefix=""
     model.eval()
     for batch in tqdm(eval_dataloader, desc="Evaluating"):
         batch = tuple(t.to(args.device) for t in batch)
+
+        decode_batch(tokenizer, batch)
 
         with torch.no_grad():
             inputs = {"input_ids": batch[0], "attention_mask": batch[1], "labels": batch[3]}

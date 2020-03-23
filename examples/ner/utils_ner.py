@@ -222,6 +222,15 @@ def get_labels(path):
     else:
         return ["O", "B-MISC", "I-MISC", "B-PER", "I-PER", "B-ORG", "I-ORG", "B-LOC", "I-LOC"]
 
+def decode_batch(tokenizer, batch):
+    to_ignore=["[CLS]", "[UNK]", "[PAD]", "[SEP]"]
+    for inp in batch[0]:
+        word = tokenizer.decode(inp)
+        for s in to_ignore:
+            word = word.replace(s, '')
+        print("Decoded word: %s" % (word,))
+    print("End of batch\n")
+
 def store_predictions(predictions, gt, output_test_predictions_file, examples_file):
     raw_predictions = copy.deepcopy(predictions)
     problematic_examples = set()
