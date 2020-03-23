@@ -206,7 +206,7 @@ def main():
             assert all(map(lambda x: x == l[0], l[1:]))
             examples_ids.append(l[0])
         examples_ids = np.array(examples_ids)
-        print("Number of examples: %d" % (len(list(set(examples_ids)))))
+        print("Number of examples: %d" % (len(np.unique(examples_ids))))
         try:
             assert len(list(filter(lambda x: x>=0, np.unique(examples_ids)))) == len(set(examples_paths))
         except AssertionError:
@@ -216,7 +216,7 @@ def main():
         results_per_example = {}
         predictions_per_sample_dir = "sample_predictions"
         os.mkdir(predictions_per_sample_dir)
-        for e_idx in examples_ids:
+        for e_idx in np.unique(examples_ids):
             indexes = np.where(examples_ids == e_idx)[0]
             e_gt = np.take(gt, indexes)
             e_pred = np.take(predictions, indexes)
