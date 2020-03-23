@@ -131,8 +131,8 @@ def convert_examples_to_features(
 
         # Account for [CLS] and [SEP] with "- 2" and with "- 3" for RoBERTa.
         
-        if len(tokens) > max_seq_length:
-            logging.warning("Example %d tokens' length %d exceed maximum sequence length %d" % (ex_index, len(tokens), max_seq_length))
+        if len(tokens) > max_seq_length - 3:
+            print("Example %d tokens' length %d exceed maximum sequence length %d" % (ex_index, len(tokens), max_seq_length))
         special_tokens_count = 3 if sep_token_extra else 2
         if len(tokens) > max_seq_length - special_tokens_count:
             tokens = tokens[: (max_seq_length - special_tokens_count)]
@@ -225,26 +225,35 @@ def get_labels(path):
 def store_predictions(predictions, gt, output_test_predictions_file, examples_file):
     raw_predictions = copy.deepcopy(predictions)
     problematic_examples = set()
-    empty_line = False
     with open(output_test_predictions_file, "w") as writer:
         with open(examples_file, "r") as f:
             example_id = 0
             for line in f:
+                line = line.strip()
                 if line.startswith("-DOCSTART-") or line == "" or line == "\n":
+                    line = "\n"
                     writer.write(line)
-                    if not empty_line and not predictions[example_id]:
+                    if not predictions[example_id]:
                         example_id += 1
-                    empty_line = True
                 else:
-                    empty_line = False
                     if predictions[example_id]:
-                        output_line = line.split()[0] + " " + predictions[example_id].pop(0) + " " + gt[example_id].pop(0) + "\n"
+                        pred_label, gt_label = predictions[example_id].pop(0), gt[example_id].pop(0)
+                        output_line = line.split()[0] + " " + pred_label + " " + gt_label + "\n"
                         writer.write(output_line)
                     else:
+                        print("No prediction for line `%s`" % (line,)) # WHY does it happen
+                        print("Adding %d as problematic example" % example_id)
+                        print("Initially we had %d predictions for this example" % (len(raw_predictions[example_id])))
+                        print("Initial predictions: ", raw_predictions[example_id])
                         problematic_examples.add(example_id)
+                        word, gt_label = line.split()
+                        output_line = word + " " + "UNK" + " " + gt_label + "\n"
+                        writer.write(output_line)
     
     if len(problematic_examples) > 0:
-        print("Predictions list has %s as lengths" % (set(map(lambda p: len(p), predictions))))
-        print("Number of predictions ", len(predictions))
-        print("Problematic examples %s" % (problematic_examples,))
+        print("Number of predictions ", len(raw_predictions))
+        print("Problematic examples for %s: %s" % (examples_file, list(map(lambda i: raw_predictions[i], problematic_examples))))
         print("Lengths of problematic examples %s" % (set(map(lambda i: len(raw_predictions[i]), problematic_examples))))
+        print("Lenghts of other examples %s" % (set(map(lambda i: len(raw_predictions[i]), set(range(len(raw_predictions))).difference(problematic_examples)))))
+    else:
+        print("No problematic examples were found on %s" % (examples_file,))
