@@ -133,6 +133,7 @@ def get_args():
     setattr(args, "local_rank", -1)
     setattr(args, "fp16", False)
     setattr(args, "per_gpu_eval_batch_size", 8)
+    setattr(args, "decode_batch", False)
 
     return args
 
