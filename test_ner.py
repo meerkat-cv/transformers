@@ -238,7 +238,7 @@ def main():
         print("%f%% of examples are bad, given provided criteria" % (100 *  len(bad_examples) / len(results_per_example.keys())))
 
     # predictions for test set
-    do_test_set = False
+    do_test_set = True
     if do_test_set:
         result, predictions, gt, _, _ = evaluate(args, model, tokenizer, labels, pad_token_label_id, mode="test")
 
@@ -261,7 +261,8 @@ def main():
                 "recall": recall_score(np.take(l_gt, indexes), np.take(l_preds, indexes)),
                 "f1": f1_score(np.take(l_gt, indexes), np.take(l_preds, indexes)),
             }
-        print(results_per_class)
+        for cl, metrics in sorted(list(results_per_class.items())):
+            print("%s: %s" % (cl, metrics))
 
         # Save results
         output_test_results_file = os.path.join(args.output_dir, "test_results.txt")
