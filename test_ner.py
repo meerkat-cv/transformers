@@ -1,6 +1,9 @@
 import os
 import argparse
 import logging
+import sys
+sys.path.append('src/')
+sys.path.append('examples/ner/')
 
 import torch
 from torch.nn import CrossEntropyLoss

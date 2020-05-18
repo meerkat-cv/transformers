@@ -10,10 +10,9 @@ NUM_EPOCHS=3
 SAVE_STEPS=750
 SEED=1
 
-#DATA_DIRS="$HOME/Datasets/meerkat-NER_clean $HOME/Datasets/leNER-Br_ENDERECO"
-#LABEL_PATH=$HOME/Datasets/meerkat-NER_clean/labels.txt
-#OUTPUT_DIR=portuguese-bert-meerkat_clean+lener_end
-
+DATA_DIRS="/home/jpsmartinez/Datasets/NER/meerkat-NER_inspected"
+LABEL_PATH=/home/jpsmartinez/Datasets/NER/meerkat-NER_inspected/labels.txt
+OUTPUT_DIR=portuguese-bert-meerkat_inspected+lener_end
 
 LOG_PATH=$OUTPUT_DIR/test.log
 
